@@ -1,175 +1,358 @@
--- ==========================================
--- 🛒 BigBasket Product & Pricing Data Model
+-- ========================================== 
+-- 📊 BigBasket Product & Pricing Data Model
 -- File: queries.sql
 -- Description: SQL Analytical Queries, Subqueries, and Joins
+-- Author: CHANCHAL SATISHCHANDRA PAL
+-- ==========================================
+USE Bigbasket;
+
+-- ==========================================
+-- 🧩 Part 1 — Business Insights & Analytics
 -- ==========================================
 
+-- Q1. List all categories with their total number of products.
+SELECT 
+    C.Category_name, 
+    COUNT(P.Product_id) AS total_products
+FROM Category AS C
+LEFT JOIN Product AS P 
+    ON C.Category_id = P.Category_id
+GROUP BY C.Category_name
+ORDER BY total_products DESC;
 
--- ==========================
--- 🔹SECTION: BASIC SQL QUERIES
--- ==========================
-
--- 1️⃣ List brands whose names start and end with the same letter, ordered by brand ID.
-SELECT brand_id, brand_name
-FROM brand
-WHERE LOWER(LEFT(brand_name,1)) = LOWER(RIGHT(brand_name,1))
-ORDER BY CAST(SUBSTRING(brand_id, 5) AS UNSIGNED) ASC;
-
-
--- 2️⃣ Find the average rating of products grouped by price bands (<100, 100–500, >500).
-SELECT
-  CASE
-    WHEN sale_price < 100 THEN '<100'
-    WHEN sale_price BETWEEN 100 AND 500 THEN '100–500'
-    ELSE '>500'
-  END AS price_band,
-  AVG(rating) AS avg_rating
-FROM pricing
-GROUP BY price_band;
-
-
--- 3️⃣ List product_id and product_name where the description is longer than 150 characters.
-SELECT product_id, product_name, LENGTH(description) AS desc_length
-FROM product
-WHERE LENGTH(description) > 150
-ORDER BY desc_length DESC;
-
-
--- 4️⃣ Show all brands where the country_of_origin is either ‘India’ or ‘USA’.
-SELECT brand_id, brand_name, country_of_origin
-FROM brand
-WHERE country_of_origin IN ('India', 'USA')
-ORDER BY CAST(SUBSTRING(brand_id, 5) AS UNSIGNED) ASC;
-
-
--- 5️⃣ List all products where product_name starts and ends with the letter ‘a’.
-SELECT product_id, product_name
-FROM product
-WHERE product_name LIKE 'a%' AND product_name LIKE '%a'
-ORDER BY CAST(SUBSTRING(product_id, 5) AS UNSIGNED) ASC;
-
-
--- 6️⃣ Find brands where brand_name starts and ends with the same letter (case-insensitive).
-SELECT brand_id, brand_name
-FROM brand
-WHERE LOWER(LEFT(brand_name,1)) = LOWER(RIGHT(brand_name,1))
-ORDER BY CAST(SUBSTRING(brand_id, 5) AS UNSIGNED) ASC;
-
-
--- 7️⃣ List all brands where brand_name has more than 8 characters and ends with ‘n’.
-SELECT brand_id, brand_name
-FROM brand
-WHERE LENGTH(brand_name) > 8 AND RIGHT(brand_name,1) = 'n'
-ORDER BY CAST(SUBSTRING(brand_id, 5) AS UNSIGNED) ASC;
-
-
--- 8️⃣ Find the average sale price of products whose market price is above 500.
-SELECT AVG(sale_price) AS avg_high_market
-FROM pricing
-WHERE market_price > 500;
-
-
--- 9️⃣ Find the top 5 most expensive products by sale_price.
-SELECT product_id, sale_price
-FROM pricing
-ORDER BY sale_price DESC
+-- Q2. Display the top 5 highest-priced products.
+SELECT 
+    P.Product_name, 
+    Pr.Sale_price
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+ORDER BY Pr.Sale_price DESC
 LIMIT 5;
 
+-- Q3. Show average sale price per category.
+SELECT 
+    C.Category_name, 
+    ROUND(AVG(Pr.Sale_price), 2) AS avg_price
+FROM Category AS C
+JOIN Product AS P 
+    ON C.Category_id = P.Category_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY C.Category_name;
 
--- 🔟 Find total sale price of products where sale_price is less than market_price.
-SELECT SUM(sale_price) AS discounted_sales
-FROM pricing
-WHERE sale_price < market_price;
+-- Q4. Find brands founded before the year 2000.
+SELECT 
+    Brand_name, 
+    Founded_year
+FROM Brand
+WHERE Founded_year < 2000;
 
+-- Q5. List the top 5 products with the highest rating-to-price ratio.
+SELECT 
+    Pr.Product_id, 
+    P.Product_name, 
+    Pr.Rating, 
+    Pr.Sale_price,
+    ROUND((Pr.Rating / Pr.Sale_price), 4) AS rating_price_ratio
+FROM Pricing AS Pr
+JOIN Product AS P 
+    ON Pr.Product_id = P.Product_id
+ORDER BY rating_price_ratio DESC
+LIMIT 5;
 
--- 1️⃣1️⃣ Show all brands where the brand_name is a palindrome.
-SELECT brand_id, brand_name
-FROM brand
-WHERE LOWER(brand_name) = REVERSE(LOWER(brand_name));
+-- Q6. Find the top 5 brands with the highest average product sale price.
+SELECT 
+    B.Brand_name,
+    ROUND(AVG(Pr.Sale_price), 2) AS avg_sale_price
+FROM Brand AS B
+JOIN Product AS P 
+    ON B.Brand_id = P.Brand_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY B.Brand_name
+ORDER BY avg_sale_price DESC
+LIMIT 5;
 
+-- Q7. Identify the top 3 brands with the highest average discount percentage.
+SELECT 
+    B.Brand_name, 
+    ROUND(AVG((Pr.Market_price - Pr.Sale_price) / Pr.Market_price * 100), 2) AS avg_discount
+FROM Brand AS B
+JOIN Product AS P
+    ON B.Brand_id = P.Brand_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY B.Brand_name
+ORDER BY avg_discount DESC
+LIMIT 3;
 
--- ==========================
--- 🔹SECTION: SUBQUERIES
--- ==========================
+-- Q8. Display subcategories along with the total number of products in each.
+SELECT 
+    S.Subcategory_name, 
+    COUNT(P.Product_id) AS total_products
+FROM Subcategory AS S
+JOIN Product AS P 
+    ON S.Subcategory_id = P.Subcategory_id
+GROUP BY S.Subcategory_name
+ORDER BY total_products DESC;
 
--- 1️⃣ Find all products with sale_price above the average.
-SELECT product_id, sale_price
-FROM pricing
-WHERE sale_price > (SELECT AVG(sale_price) FROM pricing)
-ORDER BY sale_price DESC;
+-- Q9. Display each brand with total number of products and average sale price.
+SELECT 
+    B.Brand_name,
+    COUNT(P.Product_id) AS total_products,
+    ROUND(AVG(Pr.Sale_price), 2) AS avg_price
+FROM Brand AS B
+JOIN Product AS P 
+    ON B.Brand_id = P.Brand_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY B.Brand_name
+ORDER BY total_products DESC;
 
+-- Q10. Show total number of brands by country.
+SELECT 
+    Country_of_Origin, 
+    COUNT(*) AS total_brands
+FROM Brand
+GROUP BY Country_of_Origin;
 
--- 2️⃣ Find products whose sale_price equals the second-highest sale_price.
-SELECT product_id, sale_price
-FROM pricing
-WHERE sale_price = (
-  SELECT MAX(sale_price)
-  FROM pricing
-  WHERE sale_price < (SELECT MAX(sale_price) FROM pricing)
+-- ==========================================
+-- 💰 Part 2 — Pricing & Profit Analytics
+-- ==========================================
+
+-- Q11. Display each product’s discount percentage and categorize discount level.
+SELECT 
+    P.Product_name,
+    ROUND(((Pr.Market_price - Pr.Sale_price) / Pr.Market_price) * 100, 2) AS discount_percent,
+    CASE
+        WHEN ((Pr.Market_price - Pr.Sale_price) / Pr.Market_price) * 100 >= 70 THEN 'High Discount'
+        WHEN ((Pr.Market_price - Pr.Sale_price) / Pr.Market_price) * 100 >= 35 THEN 'Medium Discount'
+        ELSE 'Low Discount'
+    END AS discount_level
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+ORDER BY discount_percent DESC;
+
+-- Q12. List the top 5 most profitable products.
+SELECT 
+    P.Product_name, 
+    (Pr.Market_price - Pr.Sale_price) AS profit
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+ORDER BY profit DESC
+LIMIT 5;
+
+-- Q13. Display total profit per category.
+SELECT 
+    C.Category_name, 
+    SUM(Pr.Market_price - Pr.Sale_price) AS total_profit
+FROM Category AS C
+JOIN Product AS P 
+    ON C.Category_id = P.Category_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY C.Category_name;
+
+-- Q14. Find top 3 categories with the highest profit margin.
+SELECT 
+    C.Category_name, 
+    ROUND(AVG(Pr.Market_price - Pr.Sale_price), 2) AS avg_margin
+FROM Category AS C
+JOIN Product AS P 
+    ON C.Category_id = P.Category_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY C.Category_name
+ORDER BY avg_margin DESC
+LIMIT 3;
+
+-- Q15. Find products priced above overall average.
+SELECT 
+    P.Product_name, 
+    Pr.Sale_price
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+WHERE Pr.Sale_price > (SELECT AVG(Sale_price) FROM Pricing);
+
+-- Q16. Rank categories by total profit using a window function.
+SELECT 
+    C.Category_name, 
+    SUM(Pr.Market_price - Pr.Sale_price) AS total_profit,
+    RANK() OVER (ORDER BY SUM(Pr.Market_price - Pr.Sale_price) DESC) AS rank_no
+FROM Category AS C
+JOIN Product AS P 
+    ON C.Category_id = P.Category_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY C.Category_name;
+
+-- Q17. Find products whose sale price ≥ category average.
+SELECT 
+    C.Category_name, 
+    P.Product_name, 
+    Pr.Sale_price
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+JOIN Category AS C 
+    ON P.Category_id = C.Category_id
+WHERE Pr.Sale_price >= (
+    SELECT AVG(Pr2.Sale_price)
+    FROM Pricing AS Pr2
+    JOIN Product AS P2 ON Pr2.Product_id = P2.Product_id
+    WHERE P2.Category_id = P.Category_id
 );
 
+-- Q18. Calculate percentage difference between market and sale price.
+SELECT 
+    P.Product_name,
+    ROUND(((Pr.Market_price - Pr.Sale_price) / Pr.Market_price) * 100, 2) AS discount_percent
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id;
 
--- 3️⃣ Find brands where brand_name length equals the maximum brand_name length.
-SELECT brand_id, brand_name
-FROM brand
-WHERE LENGTH(brand_name) = (SELECT MAX(LENGTH(brand_name)) FROM brand);
+-- Q19. Display average market price by brand and category.
+SELECT 
+    B.Brand_name, 
+    C.Category_name, 
+    ROUND(AVG(Pr.Market_price), 2) AS avg_price
+FROM Brand AS B
+JOIN Product AS P 
+    ON B.Brand_id = P.Brand_id
+JOIN Category AS C 
+    ON P.Category_id = C.Category_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY B.Brand_name, C.Category_name;
 
+-- Q20. Display all product categories along with their total sales, sorted to identify the highest-selling category.
+SELECT 
+    C.Category_name, 
+    SUM(Pr.Sale_price) AS total_sales
+FROM Category AS C
+JOIN Product AS P 
+    ON C.Category_id = P.Category_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY C.Category_name
+ORDER BY total_sales DESC;
 
--- 4️⃣ Find brand_id and founded_year of the earliest founded brand(s).
-SELECT brand_id, founded_year
-FROM brand
-WHERE founded_year = (SELECT MIN(founded_year) FROM brand)
-ORDER BY CAST(SUBSTRING(brand_id, 5) AS UNSIGNED) ASC;
+-- ==========================================
+-- ⭐ Part 3 — Rating, Performance & Trend Analysis
+-- ==========================================
 
+-- Q21. Show the top 5 highest-rated products.
+SELECT 
+    P.Product_name, 
+    Pr.Rating
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+ORDER BY Pr.Rating DESC
+LIMIT 5;
 
--- 5️⃣ Find products where sale_price is below the minimum market_price or rating below average.
-SELECT product_id, sale_price, rating
-FROM pricing
-WHERE sale_price < (SELECT MIN(market_price) FROM pricing)
-   OR rating < (SELECT AVG(rating) FROM pricing)
-ORDER BY CAST(SUBSTRING(product_id, 5) AS UNSIGNED) ASC;
+-- Q22. Find average rating per brand.
+SELECT 
+    B.Brand_name, 
+    ROUND(AVG(Pr.Rating), 2) AS avg_rating
+FROM Brand AS B
+JOIN Product AS P 
+    ON B.Brand_id = P.Brand_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY B.Brand_name;
 
+-- Q23. Display all categories whose average rating > 4.
+SELECT 
+    C.Category_name, 
+    ROUND(AVG(Pr.Rating), 2) AS avg_rating
+FROM Category AS C
+JOIN Product AS P 
+    ON C.Category_id = P.Category_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY C.Category_name
+HAVING AVG(Pr.Rating) > 4;
 
--- ==========================
--- 🔹SECTION: JOINS
--- ==========================
+-- Q24. Categorize each product based on its rating.
+SELECT 
+    P.Product_name,
+    CASE 
+        WHEN Pr.Rating >= 4.5 THEN 'Excellent'
+        WHEN Pr.Rating >= 3 THEN 'Good'
+        ELSE 'Average'
+    END AS rating_status
+FROM Product AS P
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id;
 
--- 1️⃣ List all products with their brand names.
-SELECT P.product_id, P.product_name, B.brand_name
-FROM product AS P
-INNER JOIN brand AS B ON P.brand_id = B.brand_id
-ORDER BY CAST(SUBSTRING(P.product_id, 5) AS UNSIGNED) ASC;
+-- Q25. Find total sale value and average rating per brand.
+SELECT 
+    B.Brand_name,
+    ROUND(SUM(Pr.Sale_price), 2) AS total_sales,
+    ROUND(AVG(Pr.Rating), 2) AS avg_rating
+FROM Brand AS B
+JOIN Product AS P 
+    ON B.Brand_id = P.Brand_id
+JOIN Pricing AS Pr 
+    ON P.Product_id = Pr.Product_id
+GROUP BY B.Brand_name;
 
+-- ==========================================
+-- 🧠 Part 4 — String, Date & Advanced SQL Functions
+-- ==========================================
 
--- 2️⃣ List all products with their category names (including uncategorized).
-SELECT P.product_id, P.product_name, C.category_name
-FROM product AS P
-LEFT JOIN category AS C ON P.category_id = C.category_id
-ORDER BY CAST(SUBSTRING(P.product_id, 5) AS UNSIGNED) ASC;
+-- Q26. Display all products whose names contain 'Pack' or 'Bottle'.
+SELECT 
+    Product_name
+FROM Product
+WHERE Product_name LIKE '%Pack%' 
+   OR Product_name LIKE '%Bottle%';
 
+-- Q27. Classify each brand as ‘Old’ or ‘Modern’ depending on its founded year.
+SELECT 
+    Brand_name,
+    CASE 
+        WHEN Founded_year < 1990 THEN 'Old'
+        ELSE 'Modern'
+    END AS brand_type
+FROM Brand;
 
--- 3️⃣ Show each category and its product count, sorted by category ID.
-SELECT C.category_id, C.category_name, COUNT(P.product_id) AS product_count
-FROM product AS P
-RIGHT JOIN category AS C ON P.category_id = C.category_id
-GROUP BY C.category_id, C.category_name
-ORDER BY CAST(SUBSTRING(C.category_id, 5) AS UNSIGNED) ASC;
+-- Q28. Identify top 5 months (with year) having the highest number of price updates.
+SELECT 
+    YEAR(Last_updated) AS update_year,
+    MONTHNAME(Last_updated) AS update_month,
+    COUNT(*) AS total_updates
+FROM Pricing
+GROUP BY YEAR(Last_updated), MONTHNAME(Last_updated)
+ORDER BY total_updates DESC
+LIMIT 5;
 
+-- Q29. Calculate total new categories per month and rank the months.
+SELECT 
+    MONTHNAME(Created_at) AS month_name,
+    COUNT(Category_id) AS total_categories,
+    RANK() OVER (ORDER BY COUNT(Category_id) DESC) AS month_rank
+FROM Category
+GROUP BY YEAR(Created_at), MONTHNAME(Created_at);
 
--- 4️⃣ List all categories and their subcategories where category name starts with ‘B’.
-SELECT C.category_id, C.category_name, S.sub_category_id, S.sub_category_name
-FROM category AS C
-JOIN subcategory AS S ON C.category_id = S.category_id
-WHERE C.category_name LIKE 'B%'
-ORDER BY CAST(SUBSTRING(C.category_id, 5) AS UNSIGNED) ASC;
+-- Q30. Categorize brands by country and create a formatted brand label.
+SELECT 
+    Brand_name,
+    Country_of_Origin,
+    CONCAT(
+        Brand_name, ' - ',
+        CASE 
+            WHEN Country_of_Origin = 'India' THEN 'Domestic Brand'
+            ELSE 'Global Brand'
+        END
+    ) AS Brand_Label
+FROM Brand;
 
-
--- 5️⃣ For each subcategory, show total and average sale price of its products.
-SELECT S.sub_category_id, S.sub_category_name,
-       SUM(Pr.sale_price) AS Total_sales,
-       AVG(Pr.sale_price) AS Avg_sales
-FROM subcategory AS S
-JOIN product AS P ON S.sub_category_id = P.sub_category_id
-JOIN pricing AS Pr ON P.product_id = Pr.product_id
-GROUP BY S.sub_category_id, S.sub_category_name
-ORDER BY Total_sales;
+-- ==========================================
+-- ✅ END OF FILE
+-- ==========================================
