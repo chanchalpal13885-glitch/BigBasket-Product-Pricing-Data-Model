@@ -76,9 +76,6 @@ Run **`insert_data.sql`** to insert sample records into tables.
 ### Step 3️⃣ — Query Execution  
 Run **`queries.sql`** to perform advanced analytics such as brand analysis, pricing comparison, and category trends.  
 
-### Step 4️⃣ — Visualization & Reporting  
-Use **Excel** or **BI tools (Power BI/Tableau)** to visualize query results and generate insights.  
-
 ---
 
 ## 📁 Project Structure  
